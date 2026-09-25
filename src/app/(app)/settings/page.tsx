@@ -7,7 +7,7 @@ export const metadata = { title: "Settings — TCF Prep" };
 
 function Section({ id, title, desc, danger, children }: { id: string; title: string; desc: string; danger?: boolean; children: React.ReactNode }) {
   return (
-    <section id={id} className={`glass grain scroll-mt-28 rounded-3xl p-7 md:p-9 ${danger ? "!border-red-400/25" : ""}`}>
+    <section id={id} className={`glass grain scroll-mt-[8.25rem] rounded-3xl p-7 md:p-9 ${danger ? "!border-red-400/25" : ""}`}>
       <div className="mb-7">
         <h2 className={`text-xl ${danger ? "text-red-200" : ""}`}>{title}</h2>
         <p className="mt-1 text-sm text-muted">{desc}</p>

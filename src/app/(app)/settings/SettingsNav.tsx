@@ -45,7 +45,7 @@ export function SettingsNav({ items }: { items: Item[] }) {
   }, [items]);
 
   return (
-    <nav className="glass sticky top-28 space-y-1 rounded-3xl p-3">
+    <nav className="glass sticky top-[8.25rem] space-y-1 rounded-3xl p-3">
       {items.map((t) => (
         <a
           key={t.id}
