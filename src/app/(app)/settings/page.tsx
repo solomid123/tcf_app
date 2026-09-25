@@ -1,7 +1,4 @@
-import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
-import { Backdrop } from "@/components/Backdrop";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
 import { AvatarUploader } from "./AvatarUploader";
 import { DeleteAccountForm, GoalsForm, PasswordForm, ProfileForm } from "./Forms";
 
@@ -27,26 +24,13 @@ const toc = [
 ];
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth.user;
-  if (!user) redirect("/login?next=/settings");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url, target_nclc, exam_date")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { user, profile } = await getSession();
 
   const providers: string[] = user.app_metadata?.providers ?? [];
   const displayName = profile?.full_name ?? user.email ?? null;
 
   return (
     <>
-      <Backdrop />
-      <AppHeader active="/settings" avatarUrl={profile?.avatar_url} name={displayName} />
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-14">
         <p className="eyebrow">Paramètres</p>
         <h1 className="mt-3 text-4xl md:text-5xl"><span className="text-chrome">Settings</span></h1>
 
@@ -92,7 +76,6 @@ export default async function SettingsPage() {
             </Section>
           </div>
         </div>
-      </main>
     </>
   );
 }

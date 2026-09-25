@@ -1,14 +1,4 @@
-export const skills = [
-  { code: "CO", name: "Compréhension orale", en: "Listening", q: "39 questions", t: "35 min",
-    desc: "Real-speed audio clips — announcements, conversations, interviews — with instant answer review." },
-  { code: "CE", name: "Compréhension écrite", en: "Reading", q: "39 questions", t: "60 min",
-    desc: "Everyday documents to complex articles, graded from A1 to C2 like the real exam." },
-  { code: "EE", name: "Expression écrite", en: "Writing", q: "3 tasks", t: "60 min",
-    desc: "Timed writing tasks with word counters, model answers and rubric-based feedback." },
-  { code: "EO", name: "Expression orale", en: "Speaking", q: "3 tasks", t: "12 min",
-    desc: "Record yourself under exam conditions and compare against sample responses." },
-];
-
+export { SKILLS as skills } from "@/lib/tcf";
 export const nclc = [
   { level: "NCLC 4–5", label: "Basic", w: "30%" },
   { level: "NCLC 6–7", label: "Intermediate", w: "55%" },
