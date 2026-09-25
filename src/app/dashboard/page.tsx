@@ -1,11 +1,16 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
 import { Backdrop } from "@/components/Backdrop";
-import { Logo } from "@/components/Logo";
-import { signOut } from "@/app/auth/actions";
-import { createClient } from "@/lib/supabase/server";
 import { skills } from "@/components/landing/data";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard — TCF Prep" };
+
+function daysUntil(date: string) {
+  const ms = new Date(`${date}T00:00:00`).getTime() - new Date().setHours(0, 0, 0, 0);
+  return Math.round(ms / 86_400_000);
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,38 +19,42 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, target_nclc")
+    .select("full_name, avatar_url, target_nclc, exam_date")
     .eq("id", auth.user.id)
     .maybeSingle();
 
   const name = profile?.full_name?.split(" ")[0] || auth.user.email?.split("@")[0];
+  const days = profile?.exam_date ? daysUntil(profile.exam_date) : null;
+  const hasGoals = Boolean(profile?.target_nclc || profile?.exam_date);
 
   return (
     <>
       <Backdrop />
-      <header className="mx-auto mt-4 w-full max-w-6xl px-4">
-        <nav className="glass grain flex items-center justify-between rounded-full py-2.5 pl-5 pr-2.5">
-          <Logo />
-          <div className="flex items-center gap-3">
-            {profile?.avatar_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full border border-white/20" referrerPolicy="no-referrer" />
-            )}
-            <form action={signOut}>
-              <button className="btn btn-glass !py-2 text-sm">Sign out</button>
-            </form>
-          </div>
-        </nav>
-      </header>
+      <AppHeader active="/dashboard" avatarUrl={profile?.avatar_url} name={profile?.full_name ?? auth.user.email} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-14">
         <p className="eyebrow">Tableau de bord</p>
         <h1 className="mt-3 text-4xl md:text-5xl">
           Bonjour, <span className="text-chrome">{name}</span>
         </h1>
-        <p className="mt-3 text-muted">
-          {profile?.target_nclc ? `Target: NCLC ${profile.target_nclc}` : "Pick a skill to start practising."}
-        </p>
+
+        {hasGoals ? (
+          <div className="mt-5 flex flex-wrap gap-2 text-sm">
+            {profile?.target_nclc && (
+              <span className="glass rounded-full px-4 py-1.5">Target · NCLC {profile.target_nclc}</span>
+            )}
+            {days !== null && (
+              <span className="glass rounded-full px-4 py-1.5">
+                {days > 0 ? `Exam in ${days} day${days === 1 ? "" : "s"}` : days === 0 ? "Exam today — bonne chance !" : "Exam date passed"}
+              </span>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-muted">
+            Pick a skill to start practising, or{" "}
+            <Link href="/settings#goals" className="text-fg underline-offset-4 hover:underline">set your exam goals</Link>.
+          </p>
+        )}
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {skills.map((s) => (
