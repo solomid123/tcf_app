@@ -19,7 +19,8 @@
   --font-sans: "Century Gothic", "CenturyGothic", "AppleGothic", var(--font-questrial), ui-sans-serif, system-ui, sans-serif;
 }
 
-html { color-scheme: dark; }
+html { color-scheme: dark; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
 body {
   background: var(--bg);

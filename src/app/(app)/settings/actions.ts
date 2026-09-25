@@ -10,7 +10,7 @@ export type FormState = { ok?: string; error?: string } | undefined;
 async function requireUser() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login?next=/settings");
+  if (!data.user) redirect("/auth/signout");
   return { supabase, user: data.user };
 }
 

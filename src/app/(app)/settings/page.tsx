@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/session";
 import { AvatarUploader } from "./AvatarUploader";
+import { SettingsNav } from "./SettingsNav";
 import { DeleteAccountForm, GoalsForm, PasswordForm, ProfileForm } from "./Forms";
 
 export const metadata = { title: "Settings — TCF Prep" };
@@ -31,18 +32,11 @@ export default async function SettingsPage() {
 
   return (
     <>
-        <p className="eyebrow">Paramètres</p>
-        <h1 className="mt-3 text-4xl md:text-5xl"><span className="text-chrome">Settings</span></h1>
+        <h1 className="sr-only">Settings</h1>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[200px_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[200px_1fr]">
           <aside className="hidden lg:block">
-            <nav className="glass sticky top-8 space-y-1 rounded-3xl p-3">
-              {toc.map((t) => (
-                <a key={t.id} href={`#${t.id}`} className="block rounded-2xl px-4 py-2.5 text-sm text-muted transition-colors hover:bg-white/5 hover:text-fg">
-                  {t.label}
-                </a>
-              ))}
-            </nav>
+            <SettingsNav items={toc} />
           </aside>
 
           <div className="space-y-6">

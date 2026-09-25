@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 export const getSession = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login");
+  // A token can look valid to the proxy but belong to a deleted user — clear it to avoid a redirect loop.
+  if (!data.user) redirect("/auth/signout");
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, avatar_url, target_nclc, exam_date")
