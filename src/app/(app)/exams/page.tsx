@@ -1,3 +1,4 @@
+import { Bullets } from "@/components/Bullets";
 import { TrafficLights } from "@/components/TrafficLights";
 import { getSession } from "@/lib/session";
 import { formatScore, nclcLabel, SKILL_CODES, SKILLS, type Skill } from "@/lib/tcf";
@@ -6,7 +7,7 @@ export const metadata = { title: "Exams — TCF Prep" };
 
 const TOTAL_MIN = SKILLS.reduce((s, x) => s + x.minutes, 0);
 const rules = [
-  "Strict timer per épreuve — answers lock when time runs out",
+  "Strict timer per épreuve, answers lock when time runs out",
   "No going back to previous questions in CO and CE",
   "Official question counts and A1 → C2 difficulty curve",
   "Score on the TCF scale + NCLC level for each skill",
@@ -47,9 +48,7 @@ export default async function ExamsPage() {
           <div>
             <h2 className="text-3xl">Complete TCF Canada</h2>
             <p className="mt-3 text-muted">All four épreuves back to back, in official order.</p>
-            <ul className="mt-6 space-y-2.5 text-sm text-fg/80">
-              {rules.map((r) => <li key={r}>— {r}</li>)}
-            </ul>
+            <Bullets items={rules} className="mt-6 space-y-2.5 text-sm text-fg/80" />
             <button disabled className="btn btn-primary mt-8 cursor-not-allowed opacity-60">Start full exam · coming soon</button>
           </div>
           <ol className="space-y-3">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bullets } from "@/components/Bullets";
 import { faqs, nclc, skills } from "./data";
 
 export function Skills() {
@@ -42,9 +43,7 @@ export function Modes() {
           <div key={m.n} className={`p-10 ${i === 0 ? "border-b border-line md:border-b-0 md:border-r" : ""}`}>
             <p className="eyebrow">Mode {m.n}</p>
             <h3 className="mt-3 text-3xl">{m.title}</h3>
-            <ul className="mt-6 space-y-3 text-fg/75">
-              {m.items.map((it) => <li key={it}>— {it}</li>)}
-            </ul>
+            <Bullets items={m.items} className="mt-6 space-y-3 text-fg/75" />
           </div>
         ))}
       </div>
