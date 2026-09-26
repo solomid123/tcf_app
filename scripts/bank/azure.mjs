@@ -18,8 +18,15 @@ async function withRetry(label, fn, tries = 4) {
   }
 }
 
-// Fuelix gateway (OpenAI-compatible chat completions): model ids are given as "fuelix:<model>".
-function fuelixJson({ model, input, schema, name, instructions }) {
+// OpenAI-compatible chat completions. "fuelix:<model>" goes to the Fuelix gateway,
+// "azure-chat:<deployment>" to a chat deployment on the Azure resource (e.g. FW-Kimi-K3).
+const GATEWAYS = {
+  fuelix: () => ({ url: `${process.env.FUELIX_BASE_URL}/chat/completions`, headers: { Authorization: `Bearer ${process.env.FUELIX_API_KEY}` } }),
+  "azure-chat": () => ({ url: `https://${R}.services.ai.azure.com/openai/v1/chat/completions`, headers: { "api-key": K } }),
+};
+
+function chatJson({ gateway, model, input, schema, name, instructions }) {
+  const { url, headers } = GATEWAYS[gateway]();
   const toChat = (c) =>
     typeof c === "string" ? c : c.map((p) => (p.type === "input_image" ? { type: "image_url", image_url: { url: p.image_url } } : { type: "text", text: p.text }));
   const messages = [
@@ -28,11 +35,11 @@ function fuelixJson({ model, input, schema, name, instructions }) {
   ];
   return withRetry(`llm ${model}`, async () => {
     let r;
-    // Fuelix has a per-minute request quota: on 429, wait for the window to reset instead of failing the item.
+    // Per-minute request quotas: on 429, wait for the window to reset instead of failing the item.
     for (let wait = 0; ; wait++) {
-      r = await fetch(`${process.env.FUELIX_BASE_URL}/chat/completions`, {
+      r = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${process.env.FUELIX_API_KEY}`, "Content-Type": "application/json" },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ model, messages, response_format: { type: "json_schema", json_schema: { name, strict: true, schema } } }),
         signal: AbortSignal.timeout(180_000),
       });
@@ -55,7 +62,8 @@ function fuelixJson({ model, input, schema, name, instructions }) {
 // Structured JSON completion. Default: Azure Responses API; "fuelix:<id>" routes to the Fuelix gateway.
 // `input` may be a string or a message array.
 export function llmJson({ input, schema, name = "out", instructions, model }) {
-  if (model?.startsWith("fuelix:")) return fuelixJson({ model: model.slice(7), input, schema, name, instructions });
+  const gw = model?.match(/^(fuelix|azure-chat):(.+)$/);
+  if (gw) return chatJson({ gateway: gw[1], model: gw[2], input, schema, name, instructions });
   return withRetry("llm", async () => {
     const r = await fetch(`https://${R}.services.ai.azure.com/openai/v1/responses`, {
       method: "POST",
