@@ -234,3 +234,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-float-a, .animate-float-b, .animate-float-c, .animate-fade-up { animation: none; }
 }
+
+/* Listening indicator in the CO player */
+@keyframes eq { 0%,100% { transform: scaleY(.35) } 50% { transform: scaleY(1) } }
+.eq-bar { transform-origin: bottom; transition: height .3s; }
+.eq-on { animation: eq .9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .eq-on { animation: none; } }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { SKILLS, type Skill } from "@/lib/tcf";
 
@@ -62,7 +63,11 @@ export default async function PracticePage() {
                 ))}
               </dl>
 
-              <button disabled className="btn btn-glass mt-6 w-full cursor-not-allowed opacity-60">Coming soon</button>
+              {s.code === "CO" ? (
+                <Link href="/practice/co" className="btn btn-primary mt-6 w-full">Start practising</Link>
+              ) : (
+                <button disabled className="btn btn-glass mt-6 w-full cursor-not-allowed opacity-60">Coming soon</button>
+              )}
             </article>
           );
         })}
