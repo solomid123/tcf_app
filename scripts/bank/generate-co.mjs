@@ -1,7 +1,7 @@
 // Generates one complete Compréhension orale épreuve (39 original items in the TCF Canada format):
 // text (Azure OpenAI) -> blind answer check -> audio (Azure Speech) -> pictures (FLUX) + vision check -> Supabase.
 //
-//   node --env-file=.env.local scripts/bank/generate-co.mjs --serie 1 [--only 1-4] [--publish] [--concurrency 4]
+//   node --env-file=.env.local scripts/bank/generate-co.mjs --serie 1 [--only 1-4] [--publish] [--concurrency 4] [--recast]
 //
 // Progress is cached in scripts/bank/out/co-serie-N/ so the script can be re-run to resume after a failure.
 import crypto from "node:crypto";
@@ -69,7 +69,8 @@ const VOICES = {
     F: ["fr-FR-Denise:DragonLatestNeural", "fr-FR-DeniseNeural", "fr-FR-BrigitteNeural", "fr-FR-CoralieNeural", "fr-FR-CelesteNeural", "fr-FR-JosephineNeural", "fr-FR-YvetteNeural", "fr-FR-JacquelineNeural"],
     M: ["fr-FR-Remy:DragonHDLatestNeural", "fr-FR-HenriNeural", "fr-FR-AlainNeural", "fr-FR-JeromeNeural", "fr-FR-YvesNeural", "fr-FR-ClaudeNeural", "fr-FR-MauriceNeural"],
   },
-  quebec: { F: ["fr-CA-Sylvie:DragonHDLatestNeural", "fr-CA-SylvieNeural"], M: ["fr-CA-Thierry:DragonHDLatestNeural", "fr-CA-JeanNeural", "fr-CA-AntoineNeural", "fr-CA-ThierryNeural"] },
+  // Azure has one Québec female voice and three male ones (the plain Sylvie/Thierry voices are the same people as the HD ones).
+  quebec: { F: ["fr-CA-Sylvie:DragonHDLatestNeural"], M: ["fr-CA-Thierry:DragonHDLatestNeural", "fr-CA-JeanNeural", "fr-CA-AntoineNeural"] },
   belgique: { F: ["fr-BE-CharlineNeural"], M: ["fr-BE-GerardNeural"] },
   suisse: { F: ["fr-CH-ArianeNeural"], M: ["fr-CH-FabriceNeural"] },
 };
@@ -84,13 +85,31 @@ function castVoices(speakers, position) {
     else pool = pool.filter((v) => !SENIOR.has(v)).concat(pool.filter((v) => SENIOR.has(v)));
     const start = (position * 3 + i) % Math.max(pool.length, 1);
     const rotated = [...pool.slice(start), ...pool.slice(0, start)];
-    // Prefer HD voices for the first speaker; always keep speakers distinct.
-    const pick = [...rotated.filter((v) => v.includes("Dragon")), ...rotated].find((v) => !used.has(v)) ?? VOICES.france[s.gender][0];
+    // Prefer HD voices; always keep speakers distinct (a second Québécoise falls back to a voice from France).
+    const pick = [...rotated.filter((v) => v.includes("Dragon")), ...rotated, ...VOICES.france[s.gender]].find((v) => !used.has(v)) ?? VOICES.france[s.gender][0];
     used.add(pick);
     cast[s.id] = pick;
   });
   return cast;
 }
+
+// Accent plan, decided here rather than by the model (which always picks France): about a third of the
+// items are voiced by Québec speakers, plus one Belgian and one Swiss item. Separate RNG so the letter plan is unchanged.
+const accentRand = rng(SERIE * 104729);
+const accentOrder = Array.from({ length: 39 }, (_, i) => i + 1)
+  .map((p) => [accentRand(), p])
+  .sort((a, b) => a[0] - b[0])
+  .map(([, p]) => p);
+const PLANNED_ACCENT = Object.fromEntries(accentOrder.map((p, i) => [p, i < 13 ? "quebec" : i === 13 ? "belgique" : i === 14 ? "suisse" : "france"]));
+// Items written before the plan existed may be set in France; those keep French voices.
+const FRANCE_ONLY = /\b(Paris|parisien\w*|Lyon|Marseille|Bordeaux|Toulouse|Lille|Nantes|Strasbourg|France|euros?|SNCF|RER|TGV)\b/i;
+function accentFor(slot, item) {
+  const planned = PLANNED_ACCENT[slot.position];
+  if (planned === "france") return "france";
+  const text = [item.context, item.topic, ...item.turns.map((t) => t.text), ...item.options].join(" ");
+  return FRANCE_ONLY.test(text) ? "france" : planned;
+}
+const locale = (voice) => voice.slice(0, 5);
 
 // ---------- text generation ----------
 const MAX_WORDS = { A1: 40, A2: 70, B1: 100, B2: 155, C1: 185, C2: 205 };
@@ -147,7 +166,7 @@ async function writeItem(slot, avoid) {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const raw = await llmJson({
       instructions: SYSTEM,
-      input: itemPrompt({ slot, topic: topicFor(slot), avoid }) + feedback,
+      input: itemPrompt({ slot, topic: topicFor(slot), avoid, accent: PLANNED_ACCENT[slot.position] }) + feedback,
       schema: ITEM_SCHEMA,
       name: "tcf_item",
     });
@@ -179,8 +198,9 @@ async function writeItem(slot, avoid) {
 // ---------- audio ----------
 function buildSsml(slot, item, cast) {
   const slow = slot.level === "A1" || slot.level === "A2";
+  // The explicit <lang> matters: HD voices guess the language from the text and read "Question 1." in English.
   const say = (voice, text, lead = 0) =>
-    `<voice name="${voice}">${lead ? `<break time="${lead}ms"/>` : ""}${slow ? `<prosody rate="-6%">${escapeXml(text)}</prosody>` : escapeXml(text)}</voice>`;
+    `<voice name="${voice}">${lead ? `<break time="${lead}ms"/>` : ""}<lang xml:lang="${locale(voice)}">${slow ? `<prosody rate="-6%">${escapeXml(text)}</prosody>` : escapeXml(text)}</lang></voice>`;
   const parts = [say(NARRATOR, `Question ${slot.position}.`)];
   const optionsBy = (voice) =>
     item.options.map((o, i) => say(voice, `${"ABCD"[i]}. ${o}`, i === 0 ? 900 : 1100)).join("");
@@ -256,6 +276,8 @@ async function processSlotOnce(slot) {
     log(p, `text ok — ${item.context} (${item.topic})`);
   }
   if (!s.cast) {
+    const accent = accentFor(slot, s.item);
+    s.item.speakers = s.item.speakers.map((sp) => ({ ...sp, accent }));
     s.cast = castVoices(s.item.speakers, p);
     save();
   }
@@ -347,6 +369,14 @@ async function upload() {
 }
 
 const todo = slots.filter((s) => s.position >= ONLY_FROM && s.position <= ONLY_TO);
+// --recast: keep the texts and pictures, redo voice casting and audio.
+if (process.argv.includes("--recast")) {
+  for (const sl of todo) {
+    if (state[sl.position]) delete state[sl.position].cast;
+    fs.rmSync(path.join(OUT, `q${String(sl.position).padStart(2, "0")}.mp3`), { force: true });
+  }
+  save();
+}
 console.log(`CO Série ${SERIE}: ${todo.length} item(s), concurrency ${CONCURRENCY}`);
 const t0 = Date.now();
 const failures = await pool(todo, CONCURRENCY, processSlot);

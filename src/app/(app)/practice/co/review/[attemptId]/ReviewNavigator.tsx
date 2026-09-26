@@ -40,7 +40,7 @@ export function ReviewNavigator({ items, answers }: { items: ReviewItem[]; answe
               aria-label={`Question ${q.position}: ${s === "ok" ? "correct" : s === "ko" ? "wrong" : "no answer"}`}
               onClick={() => setSel(i)}
               className={`grid h-8 w-8 place-items-center rounded-md text-xs font-bold tabular-nums transition ${
-                s === "ok" ? "bg-success/80 text-white" : s === "ko" ? "bg-danger/80 text-white" : "border border-line bg-well text-muted"
+                s === "ok" ? "border border-ok-line bg-ok-soft text-ok" : s === "ko" ? "border border-ko-line bg-ko-soft text-ko" : "border border-line bg-well text-muted"
               } ${i === sel ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent" : "hover:opacity-80"}`}
             >
               {q.position}
@@ -49,8 +49,8 @@ export function ReviewNavigator({ items, answers }: { items: ReviewItem[]; answe
         })}
       </div>
       <div className="mt-4 flex flex-wrap gap-5 text-xs text-muted">
-        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-success/80" /> Correct</span>
-        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-danger/80" /> Wrong</span>
+        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm border border-ok-line bg-ok-soft" /> Correct</span>
+        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm border border-ko-line bg-ko-soft" /> Wrong</span>
         <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm border border-line bg-well" /> No answer</span>
       </div>
 
@@ -82,7 +82,7 @@ export function ReviewNavigator({ items, answers }: { items: ReviewItem[]; answe
                 <li
                   key={i}
                   className={`flex gap-3 rounded-xl border px-3 py-2 text-sm ${
-                    i === it.answer ? "border-success/50 bg-success/10" : i === mine ? "border-danger/40 bg-danger/10" : "border-line"
+                    i === it.answer ? "border-ok-line bg-ok-soft" : i === mine ? "border-ko-line bg-ko-soft" : "border-line"
                   }`}
                 >
                   <span className="font-bold">{LETTERS[i]}</span>

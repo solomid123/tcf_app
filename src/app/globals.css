@@ -10,9 +10,16 @@
   --line: rgba(255, 255, 255, 0.1);   /* hairlines and borders */
   --tint: rgba(255, 255, 255, 0.1);   /* pills, active items */
   --well: rgba(0, 0, 0, 0.2);         /* inset rows */
-  --success: #6ee7b7;
-  --danger: #fca5a5;
+  --success: #8fd9b6;
+  --danger: #f0a39b;
   --warn: #fde68a;
+  /* Right / wrong answers: soft sage and clay rose, easy on the eyes */
+  --ok: #a3dcbf;
+  --ok-soft: rgba(126, 196, 160, 0.14);
+  --ok-line: rgba(126, 196, 160, 0.38);
+  --ko: #f1b3aa;
+  --ko-soft: rgba(229, 142, 130, 0.13);
+  --ko-line: rgba(229, 142, 130, 0.36);
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -24,9 +31,15 @@
   --line: rgba(15, 20, 36, 0.09);
   --tint: rgba(255, 255, 255, 0.85);
   --well: rgba(255, 255, 255, 0.55);
-  --success: #059669;
-  --danger: #dc2626;
+  --success: #2e8b67;
+  --danger: #c4554d;
   --warn: #b45309;
+  --ok: #2f7a5a;
+  --ok-soft: #e1f1e8;
+  --ok-line: #b9dcc8;
+  --ko: #b0574e;
+  --ko-soft: #f7e3df;
+  --ko-line: #ebc4be;
   color-scheme: light;
 }
 
@@ -41,6 +54,12 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-line: var(--ok-line);
+  --color-ko: var(--ko);
+  --color-ko-soft: var(--ko-soft);
+  --color-ko-line: var(--ko-line);
   /* Century Gothic first (installed on Windows/Office machines), Questrial as the web fallback */
   --font-sans: "Century Gothic", "CenturyGothic", "AppleGothic", var(--font-questrial), ui-sans-serif, system-ui, sans-serif;
 }

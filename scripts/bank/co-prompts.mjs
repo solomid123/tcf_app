@@ -60,7 +60,15 @@ Le candidat entend une phrase (question ou affirmation) dite par S1, puis 4 rép
 - "image_prompt" = "".`,
 };
 
-export function itemPrompt({ slot, topic, avoid }) {
+const ACCENT_GUIDE = {
+  france: "Les locuteurs sont de France (accent \"france\") : situe la scène en France ou dans un lieu neutre.",
+  quebec:
+    "Les locuteurs sont québécois (accent \"quebec\") : situe la scène au Québec ou ailleurs au Canada (villes, institutions, dollars, saisons, réalités canadiennes), avec un français standard compréhensible par tous et, au plus, une ou deux expressions québécoises courantes (« magasiner », « le dépanneur », « la fin de semaine », « un courriel »). Jamais de joual difficile.",
+  belgique: "Les locuteurs sont belges (accent \"belgique\") : situe la scène en Belgique ; tu peux utiliser « septante », « nonante ».",
+  suisse: "Les locuteurs sont suisses (accent \"suisse\") : situe la scène en Suisse romande ; tu peux utiliser « septante », « huitante », « nonante ».",
+};
+
+export function itemPrompt({ slot, topic, avoid, accent = "france" }) {
   return `Rédige la question ${slot.position} d'une épreuve de Compréhension orale du TCF Canada.
 
 Niveau visé : ${LEVEL_GUIDE[slot.level]}
@@ -70,7 +78,8 @@ ${KIND_GUIDE[slot.kind]}
 Situation imposée : ${topic}.
 ${avoid.length ? `Évite de reprendre ces situations déjà utilisées dans l'épreuve : ${avoid.join(" ; ")}.` : ""}
 
-Locuteurs : indique pour chacun le genre (F/M), la tranche d'âge (young/adult/senior) et l'accent (france/quebec/belgique/suisse ; majorité france, parfois quebec, rarement belgique ou suisse). Identifiants S1, S2, S3…
+${ACCENT_GUIDE[accent]}
+Locuteurs : indique pour chacun le genre (F/M), la tranche d'âge (young/adult/senior) et l'accent "${accent}". Identifiants S1, S2, S3…${accent === "quebec" ? " Dans un dialogue, pas plus d'une femme québécoise (une seule voix québécoise féminine est disponible)." : ""}
 Place la bonne réponse à l'index 0 de "options" (l'ordre sera mélangé ensuite) et mets "answer" à 0.`;
 }
 
