@@ -37,21 +37,24 @@ export type PublicItem = {
 export const bankUrl = (path: string | null) =>
   path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/bank/${path}` : null;
 
-export async function publishedSets(skill: "CO" | "CE") {
+/** Séries a user can see: the shared ones plus the ones they were given, oldest first. */
+export async function publishedSets(skill: "CO" | "CE", userId: string) {
   const { data } = await createAdminClient()
     .from("bank_sets")
-    .select("id, number, title")
+    .select("id, number, title, owner_id, claimed_at, created_at")
     .eq("skill", skill)
     .eq("status", "published")
-    .order("number");
-  return data ?? [];
+    .or(`owner_id.is.null,owner_id.eq.${userId}`);
+  const at = (s: { claimed_at: string | null; created_at: string }) => s.claimed_at ?? s.created_at;
+  return (data ?? []).sort((a, b) => (a.owner_id ? 1 : 0) - (b.owner_id ? 1 : 0) || at(a).localeCompare(at(b)) || a.number - b.number);
 }
 
-export async function loadSet(setId: string) {
+/** Loads a published série with its items, if this user may take it. */
+export async function loadSet(setId: string, userId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(setId)) return null;
   const admin = createAdminClient();
-  const { data: set } = await admin.from("bank_sets").select("id, skill, number, title, status").eq("id", setId).maybeSingle();
-  if (!set || set.status !== "published") return null;
+  const { data: set } = await admin.from("bank_sets").select("id, skill, number, title, status, owner_id").eq("id", setId).maybeSingle();
+  if (!set || set.status !== "published" || (set.owner_id && set.owner_id !== userId)) return null;
   const { data: items } = await admin.from("bank_items").select("*").eq("set_id", setId).order("position");
   return { set, items: (items ?? []) as BankItem[] };
 }

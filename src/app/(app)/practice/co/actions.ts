@@ -11,7 +11,7 @@ export async function submitCO(setId: string, rawAnswers: unknown, startedAt: nu
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/auth/signout");
 
-  const loaded = await loadSet(setId);
+  const loaded = await loadSet(setId, data.user.id);
   if (!loaded) throw new Error("Unknown série");
   const { items } = loaded;
 
@@ -47,4 +47,39 @@ export async function submitCO(setId: string, rawAnswers: unknown, startedAt: nu
   if (error) throw new Error(error.message);
 
   redirect(`/practice/co/review/${attempt.id}`);
+}
+
+const DAILY_NEW_SERIES = 3;
+
+/** Hands the user a fresh série from the pool, or queues one if the pool is empty. */
+export async function requestNewSerie() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) redirect("/auth/signout");
+  const userId = data.user.id;
+  const admin = createAdminClient();
+
+  // Already waiting for one: nothing to do, the page shows its progress.
+  const { count: queued } = await admin
+    .from("bank_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "queued");
+  if (queued) redirect("/practice/co");
+
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const { count: today } = await admin
+    .from("bank_sets")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .gte("claimed_at", since);
+  if ((today ?? 0) >= DAILY_NEW_SERIES) redirect("/practice/co?limit=1");
+
+  const { data: setId, error } = await admin.rpc("claim_pool_set", { p_user: userId, p_skill: "CO" });
+  if (error) throw new Error(error.message);
+  if (setId) redirect(`/practice/co/${setId}`);
+
+  const { error: qErr } = await admin.from("bank_requests").insert({ user_id: userId, skill: "CO" });
+  if (qErr) throw new Error(qErr.message);
+  redirect("/practice/co");
 }

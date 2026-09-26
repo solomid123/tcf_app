@@ -68,7 +68,10 @@ const ACCENT_GUIDE = {
   suisse: "Les locuteurs sont suisses (accent \"suisse\") : situe la scène en Suisse romande ; tu peux utiliser « septante », « huitante », « nonante ».",
 };
 
-export function itemPrompt({ slot, topic, avoid, accent = "france" }) {
+export function itemPrompt({ slot, topic, avoid, seen = [], accent = "france" }) {
+  const seenBlock = seen.length
+    ? `\nCette question a déjà été posée dans d'autres séries. N'en reprends AUCUNE (ni la même situation précise, ni la même bonne réponse, ni le même enjeu) ; écris quelque chose de nettement différent :\n${seen.map((x) => `- ${x}`).join("\n")}\n`
+    : "";
   return `Rédige la question ${slot.position} d'une épreuve de Compréhension orale du TCF Canada.
 
 Niveau visé : ${LEVEL_GUIDE[slot.level]}
@@ -76,7 +79,7 @@ Niveau visé : ${LEVEL_GUIDE[slot.level]}
 ${KIND_GUIDE[slot.kind]}
 
 Situation imposée : ${topic}.
-${avoid.length ? `Évite de reprendre ces situations déjà utilisées dans l'épreuve : ${avoid.join(" ; ")}.` : ""}
+${avoid.length ? `Évite de reprendre ces situations déjà utilisées dans l'épreuve : ${avoid.join(" ; ")}.` : ""}${seenBlock}
 
 ${ACCENT_GUIDE[accent]}
 Locuteurs : indique pour chacun le genre (F/M), la tranche d'âge (young/adult/senior) et l'accent "${accent}". Identifiants S1, S2, S3…${accent === "quebec" ? " Dans un dialogue, pas plus d'une femme québécoise (une seule voix québécoise féminine est disponible)." : ""}

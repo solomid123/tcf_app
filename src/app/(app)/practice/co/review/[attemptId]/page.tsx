@@ -11,7 +11,7 @@ const LEVELS: Level[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 export default async function COReviewPage({ params }: PageProps<"/practice/co/review/[attemptId]">) {
   const { attemptId } = await params;
-  const { supabase } = await getSession();
+  const { supabase, user } = await getSession();
   // RLS: users can only read their own attempts.
   const { data: attempt } = await supabase
     .from("attempts")
@@ -19,7 +19,7 @@ export default async function COReviewPage({ params }: PageProps<"/practice/co/r
     .eq("id", attemptId)
     .maybeSingle();
   if (!attempt?.set_id) notFound();
-  const loaded = await loadSet(attempt.set_id);
+  const loaded = await loadSet(attempt.set_id, user.id);
   if (!loaded) notFound();
 
   const answers: (number | null)[] = attempt.details?.answers ?? [];

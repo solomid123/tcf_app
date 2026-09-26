@@ -1,7 +1,7 @@
 // Generates one complete Compréhension orale épreuve (39 original items in the TCF Canada format):
 // text (Azure OpenAI) -> blind answer check -> audio (Azure Speech) -> pictures (FLUX) + vision check -> Supabase.
 //
-//   node --env-file=.env.local scripts/bank/generate-co.mjs --serie 1 [--only 1-4] [--publish] [--concurrency 4] [--recast]
+//   node --env-file=.env.local scripts/bank/generate-co.mjs --serie 1 [--only 1-4] [--publish | --status pool] [--concurrency 4] [--recast]
 //
 // Progress is cached in scripts/bank/out/co-serie-N/ so the script can be re-run to resume after a failure.
 import crypto from "node:crypto";
@@ -20,6 +20,9 @@ const arg = (name, def) => {
 };
 const SERIE = Number(arg("serie", 1));
 const PUBLISH = process.argv.includes("--publish");
+// --status pool: generated for the "New série" pool (handed to a user on request). Otherwise published or draft.
+const STATUS = arg("status", PUBLISH ? "published" : "draft");
+if (!["draft", "pool", "published"].includes(STATUS)) throw new Error(`bad --status ${STATUS}`);
 const CONCURRENCY = Number(arg("concurrency", 4));
 const only = arg("only", null);
 const [ONLY_FROM, ONLY_TO] = only ? only.split("-").map(Number) : [1, 39];
@@ -29,6 +32,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const STATE_FILE = path.join(OUT, "items.json");
 const state = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) : {};
 const save = () => fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 const log = (p, ...m) => console.log(`[Q${String(p).padStart(2, "0")}]`, ...m);
 
 // ---------- deterministic randomness per série ----------
@@ -162,11 +166,12 @@ const subjectHint = (slot) =>
     : "";
 
 async function writeItem(slot, avoid) {
+  const seen = SEEN[seenKey(slot)] ?? [];
   let feedback = subjectHint(slot);
   for (let attempt = 1; attempt <= 5; attempt++) {
     const raw = await llmJson({
       instructions: SYSTEM,
-      input: itemPrompt({ slot, topic: topicFor(slot), avoid, accent: PLANNED_ACCENT[slot.position] }) + feedback,
+      input: itemPrompt({ slot, topic: topicFor(slot), avoid, seen, accent: PLANNED_ACCENT[slot.position] }) + feedback,
       schema: ITEM_SCHEMA,
       name: "tcf_item",
     });
@@ -315,16 +320,38 @@ async function pool(items, n, fn) {
   return failures;
 }
 
+// Picture and question-réponse items are compared with every earlier one of their kind (they can sit at any
+// of their positions); documents with the same position.
+const seenKey = (x) => (x.kind === "image_description" || x.kind === "spoken_response" ? x.kind : x.position);
+
+async function loadSeen() {
+  const { data: sets } = await supabase.from("bank_sets").select("id").eq("skill", "CO").neq("number", SERIE).order("number", { ascending: false }).limit(15);
+  if (!sets?.length) return {};
+  const { data: rows } = await supabase
+    .from("bank_items")
+    .select("position, kind, level, question, options, answer, transcript")
+    .in("set_id", sets.map((x) => x.id));
+  const seen = {};
+  for (const r of rows ?? []) {
+    const gist = r.kind === "image_description" || r.kind === "spoken_response"
+      ? `${r.transcript?.[0]?.text ? r.transcript[0].text + " → " : ""}${r.options[r.answer]}`
+      : `${r.question} (${(r.transcript?.[0]?.text ?? "").slice(0, 90)}…)`;
+    (seen[seenKey(r)] ??= []).push(gist);
+  }
+  return seen;
+}
+
 async function upload() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
   const done = slots.filter((sl) => state[sl.position]?.item);
   if (done.length !== 39) {
     console.log(`Only ${done.length}/39 items ready — kept locally, not uploaded yet. Re-run without --only to finish.`);
     return;
   }
+  const { data: existing } = await supabase.from("bank_sets").select("owner_id").eq("skill", "CO").eq("number", SERIE).maybeSingle();
+  if (existing?.owner_id) throw new Error(`Série ${SERIE} already belongs to a user — refusing to overwrite it.`);
   const { data: set, error } = await supabase
     .from("bank_sets")
-    .upsert({ skill: "CO", number: SERIE, title: `Série ${SERIE}`, status: PUBLISH ? "published" : "draft" }, { onConflict: "skill,number" })
+    .upsert({ skill: "CO", number: SERIE, title: `Série ${SERIE}`, status: STATUS }, { onConflict: "skill,number" })
     .select("id")
     .single();
   if (error) throw error;
@@ -365,8 +392,11 @@ async function upload() {
   await supabase.from("bank_items").delete().eq("set_id", set.id);
   const { error: insErr } = await supabase.from("bank_items").insert(rows);
   if (insErr) throw insErr;
-  console.log(`Uploaded Série ${SERIE}: 39 items (${PUBLISH ? "published" : "draft"}).`);
+  console.log(`Uploaded Série ${SERIE}: 39 items (${STATUS}).`);
 }
+
+// What earlier séries already asked at each position, so a new série never repeats them.
+const SEEN = await loadSeen();
 
 const todo = slots.filter((s) => s.position >= ONLY_FROM && s.position <= ONLY_TO);
 // --recast: keep the texts and pictures, redo voice casting and audio.
@@ -381,4 +411,5 @@ console.log(`CO Série ${SERIE}: ${todo.length} item(s), concurrency ${CONCURREN
 const t0 = Date.now();
 const failures = await pool(todo, CONCURRENCY, processSlot);
 console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)}s. ${failures.length ? `Failed: ${failures.join(", ")} (re-run to retry)` : "No failures."}`);
-if (!failures.length) await upload();
+if (failures.length) process.exitCode = 1;
+else await upload();

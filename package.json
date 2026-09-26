@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bank:worker": "node --env-file=.env.local scripts/bank/worker.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
