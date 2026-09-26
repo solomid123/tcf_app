@@ -105,7 +105,7 @@ export default async function COReviewPage({ params }: PageProps<"/practice/co/r
                 <div>
                   {it.image_path && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={bankUrl(it.image_path)!} alt="" className="mb-4 aspect-[4/3] w-full rounded-2xl border border-line object-cover" />
+                    <img src={bankUrl(it.image_path)!} alt="" className="mb-4 aspect-[4/3] w-full rounded-2xl border border-line bg-white object-contain p-2" />
                   )}
                   {it.audio_path && <audio controls preload="none" src={bankUrl(it.audio_path)!} className="w-full" />}
                   {it.question && <p className="mt-5 text-lg">{it.question}</p>}

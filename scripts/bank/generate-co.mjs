@@ -4,12 +4,14 @@
 //   node --env-file=.env.local scripts/bank/generate-co.mjs --serie 1 [--only 1-4] [--publish] [--concurrency 4]
 //
 // Progress is cached in scripts/bank/out/co-serie-N/ so the script can be re-run to resume after a failure.
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 import { escapeXml, image, llmJson, tts, visionJson } from "./azure.mjs";
 import { blueprint, INSTRUCTIONS, TOPICS } from "./co-blueprint.mjs";
-import { CHECK_SCHEMA, checkPrompt, IMAGE_STYLE, imageCheckPrompt, ITEM_SCHEMA, itemPrompt, SYSTEM } from "./co-prompts.mjs";
+import { CHECK_SCHEMA, checkPrompt, GUESS_SCHEMA, guessPrompt, IMAGE_STYLE, imageCheckPrompt, ITEM_SCHEMA, itemPrompt, SYSTEM } from "./co-prompts.mjs";
 
 // ---------- args ----------
 const arg = (name, def) => {
@@ -127,22 +129,22 @@ function placeAnswer(item, target) {
 
 // Picture items: vary who is in the photo across the épreuve and across séries.
 const SUBJECTS = [
-  "un homme d'une trentaine d'années (sujet « Il »)",
-  "une femme âgée (sujet « Elle » ou « La dame »)",
-  "deux personnes, un homme et une femme (sujet « Ils »)",
-  "un jeune homme ou une jeune femme d'une vingtaine d'années",
-  "un homme âgé (sujet « Il » ou « Le monsieur »)",
-  "une femme d'une quarantaine d'années (sujet « Elle »)",
-  "deux enfants accompagnés d'un adulte (sujet « Ils » ou « Les enfants »)",
+  "un homme d'une trentaine d'années qui s'adresse à un ami ou un collègue",
+  "une dame âgée qui s'adresse à un commerçant ou un employé",
+  "un parent qui s'adresse à ses enfants",
+  "une jeune femme qui s'adresse à un groupe d'amis",
+  "un employé (serveur, vendeur, guichetier, agent) qui s'adresse à un client",
+  "un enfant qui s'adresse à un adulte",
+  "un couple qui se parle",
 ];
 const subjectHint = (slot) =>
   slot.kind === "image_description"
-    ? `\nPersonne(s) sur la photo : ${SUBJECTS[(SERIE * 4 + slot.position) % SUBJECTS.length]}.`
+    ? `\nPersonnage qui parle sur le dessin : ${SUBJECTS[(SERIE * 4 + slot.position) % SUBJECTS.length]}.`
     : "";
 
 async function writeItem(slot, avoid) {
   let feedback = subjectHint(slot);
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     const raw = await llmJson({
       instructions: SYSTEM,
       input: itemPrompt({ slot, topic: topicFor(slot), avoid }) + feedback,
@@ -156,13 +158,22 @@ async function writeItem(slot, avoid) {
       continue;
     }
     const item = placeAnswer(raw, targets[slot.position - 1]);
-    if (slot.kind === "image_description") return { item, check: null };
-    const check = await llmJson({ input: checkPrompt(item, slot.kind), schema: CHECK_SCHEMA, name: "check" });
-    if (check.answer === item.answer && !check.ambiguous) return { item, check };
-    log(slot.position, `attempt ${attempt} failed blind check (got ${check.answer}, ambiguous=${check.ambiguous}): ${check.issues}`);
-    feedback = `${subjectHint(slot)}\n\nATTENTION, un relecteur a jugé ta tentative précédente problématique : ${check.issues}. Écris un item entièrement nouveau, avec une seule bonne réponse indiscutable.`;
+    let check = null;
+    if (slot.kind !== "image_description") {
+      check = await llmJson({ input: checkPrompt(item, slot.kind), schema: CHECK_SCHEMA, name: "check" });
+      if (check.answer !== item.answer || check.ambiguous) {
+        log(slot.position, `attempt ${attempt} failed blind check (got ${check.answer}, ambiguous=${check.ambiguous}): ${check.issues}`);
+        feedback = `${subjectHint(slot)}\n\nATTENTION, un relecteur a jugé ta tentative précédente problématique : ${check.issues}. Écris un item entièrement nouveau, avec une seule bonne réponse indiscutable.`;
+        continue;
+      }
+    }
+    // Too easy? A reader who never heard the recording should not be able to spot the key.
+    const guess = await llmJson({ input: guessPrompt(item, slot.kind), schema: GUESS_SCHEMA, name: "guess" });
+    if (!(guess.confident && guess.answer === item.answer)) return { item, check };
+    log(slot.position, `attempt ${attempt} too easy — guessable without listening: ${guess.reason}`);
+    feedback = `${subjectHint(slot)}\n\nATTENTION, ta tentative précédente était TROP FACILE : on trouvait la bonne réponse sans écouter (${guess.reason}). Écris un item entièrement nouveau où les 4 propositions sont aussi plausibles les unes que les autres sans le document.`;
   }
-  throw new Error("could not produce a valid item after 3 attempts");
+  throw new Error("could not produce a valid item after 5 attempts");
 }
 
 // ---------- audio ----------
@@ -194,7 +205,8 @@ async function makePicture(slot, item) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     let buf;
     try {
-      buf = await image(`${IMAGE_STYLE} Scene: ${scene}${extra}`);
+      // Booklet pictures are printed in greyscale: strip any stray tint the model adds.
+      buf = await sharp(await image(`${IMAGE_STYLE} Scene: ${scene}${extra}`)).grayscale().jpeg({ quality: 88 }).toBuffer();
     } catch (e) {
       if (!/refusal|moderat|safety/i.test(e.message)) throw e;
       log(slot.position, `picture attempt ${attempt} refused by the image model — rewriting the scene`);
@@ -217,7 +229,22 @@ async function makePicture(slot, item) {
 }
 
 // ---------- pipeline ----------
+// A picture item whose situation can't be drawn unambiguously is rewritten from scratch (up to 3 scenarios).
 async function processSlot(slot) {
+  for (let scenario = 1; ; scenario++) {
+    try {
+      return await processSlotOnce(slot);
+    } catch (e) {
+      if (slot.kind !== "image_description" || scenario >= 3 || !/vision check/.test(e.message)) throw e;
+      log(slot.position, `scenario ${scenario} could not be drawn clearly — writing a new situation`);
+      delete state[slot.position];
+      save();
+      fs.rmSync(path.join(OUT, `q${String(slot.position).padStart(2, "0")}.mp3`), { force: true });
+    }
+  }
+}
+
+async function processSlotOnce(slot) {
   const p = slot.position;
   const s = (state[p] ??= { position: p, level: slot.level, kind: slot.kind, points: slot.points });
 
@@ -287,9 +314,12 @@ async function upload() {
     const put = async (ext, type) => {
       const file = path.join(OUT, `q${String(sl.position).padStart(2, "0")}.${ext}`);
       if (!fs.existsSync(file)) return null;
-      const { error: e } = await supabase.storage.from("bank").upload(`${base}.${ext}`, fs.readFileSync(file), { contentType: type, upsert: true });
+      // Content hash in the name, so a regenerated file never shows a stale cached copy.
+      const buf = fs.readFileSync(file);
+      const key = `${base}-${crypto.createHash("sha1").update(buf).digest("hex").slice(0, 8)}.${ext}`;
+      const { error: e } = await supabase.storage.from("bank").upload(key, buf, { contentType: type, upsert: true });
       if (e) throw e;
-      return `${base}.${ext}`;
+      return key;
     };
     const it = s.item;
     const spoken = sl.kind === "image_description" || sl.kind === "spoken_response";

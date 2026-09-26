@@ -135,7 +135,7 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
           className="mt-7 text-fg/80"
           items={[
             "Each recording starts automatically after the chime.",
-            "Questions 1–4: look at the picture and pick the sentence you hear that describes it.",
+            "Questions 1–4: look at the picture and pick the sentence that fits the situation, what one of the characters is saying.",
             "Questions 5–7: pick the best reply among the four you hear.",
             "Questions 8–39: listen to the document, then answer the written question.",
             "You can't go back to a previous question.",
@@ -198,7 +198,7 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
 
         {item.image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.image} alt="Photo for this question" className="mx-auto mt-7 aspect-[4/3] max-h-[46vh] w-full max-w-2xl rounded-2xl border border-line object-cover [width:auto]" />
+          <img src={item.image} alt="Drawing for this question" className="mx-auto mt-7 aspect-[4/3] max-h-[46vh] w-full max-w-2xl rounded-2xl border border-line bg-white object-contain p-2 [width:auto]" />
         )}
 
         {item.question && <p className="mt-8 text-xl leading-snug md:text-2xl">{item.question}</p>}
