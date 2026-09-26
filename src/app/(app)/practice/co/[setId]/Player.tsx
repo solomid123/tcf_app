@@ -35,6 +35,7 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
   const [answers, setAnswers] = useState<(number | null)[]>(() => items.map(() => null));
   const [phase, setPhase] = useState<Phase>("separator");
   const [left, setLeft] = useState(DURATION);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const [pending, startTransition] = useTransition();
   const audio = useRef<HTMLAudioElement | null>(null);
   const startedAt = useRef(0);
@@ -139,6 +140,7 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
             "Questions 5–7: pick the best reply among the four you hear.",
             "Questions 8–39: listen to the document, then answer the written question.",
             "You can't go back to a previous question.",
+            "It's practice: end whenever you like and get your score — unanswered questions count as wrong.",
           ]}
         />
         <label className="mt-8 flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-well p-4">
@@ -165,6 +167,7 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
   const chosen = answers[index];
   const listening = phase !== "done";
   const lowTime = left <= 5 * 60;
+  const answered = answers.filter((a) => a != null).length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -174,12 +177,38 @@ export function Player({ setId, title, items }: { setId: string; title: string; 
             <span className="text-muted">Question</span> <span className="text-lg font-bold">{item.position}</span>
             <span className="text-muted"> / {items.length}</span>
           </p>
-          <p className="hidden text-xs uppercase tracking-[0.2em] text-muted sm:block">Compréhension orale</p>
-          <p className={`font-mono text-lg tabular-nums ${lowTime ? "text-danger" : ""}`} aria-label="Time left">{fmt(left)}</p>
+          <p className="hidden text-xs uppercase tracking-[0.2em] text-muted md:block">Compréhension orale</p>
+          <div className="flex items-center gap-3">
+            {confirmEnd ? (
+              <span className="flex items-center gap-2 text-sm">
+                <span className="hidden text-muted sm:inline">End and see your score?</span>
+                <button className="btn btn-primary px-3 py-1.5 text-xs" disabled={pending} onClick={() => submit(answersRef.current)}>
+                  {pending ? "Scoring…" : "Yes, end"}
+                </button>
+                <button className="btn btn-glass px-3 py-1.5 text-xs" disabled={pending} onClick={() => setConfirmEnd(false)}>Cancel</button>
+              </span>
+            ) : (
+              <button className="btn btn-glass px-3 py-1.5 text-xs" onClick={() => setConfirmEnd(true)}>End practice</button>
+            )}
+            <p className={`font-mono text-lg tabular-nums ${lowTime ? "text-danger" : ""}`} aria-label="Time left">{fmt(left)}</p>
+          </div>
         </div>
-        <div className="mt-3 flex gap-[3px]">
-          {items.map((_, i) => (
-            <span key={i} className={`h-1 flex-1 rounded-full ${i < index ? "bg-accent/70" : i === index ? "bg-fg" : "bg-line"}`} />
+        <div className="mt-3 flex flex-wrap gap-1" aria-label={`${answered} of ${items.length} answered`}>
+          {items.map((q, i) => (
+            <span
+              key={q.position}
+              className={`grid h-6 w-6 place-items-center rounded text-[10px] font-bold tabular-nums ${
+                i === index
+                  ? "border-2 border-accent bg-well text-fg"
+                  : answers[i] != null
+                    ? "bg-accent/60 text-white"
+                    : i < index
+                      ? "bg-line text-muted"
+                      : "border border-line text-muted"
+              }`}
+            >
+              {q.position}
+            </span>
           ))}
         </div>
       </div>
