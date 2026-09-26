@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "bank:worker": "node --env-file=.env.local scripts/bank/worker.mjs"
+    "bank:worker": "node --env-file=.env.local scripts/bank/worker.mjs",
+    "eo:relay": "node --env-file=.env.local scripts/eo/relay.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -15,7 +16,8 @@
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
