@@ -79,7 +79,7 @@ export function AvatarUploader({ userId, url, name }: { userId: string; url: str
           )}
         </div>
         <p className="mt-2 text-xs text-muted">PNG, JPG, WEBP or GIF · max 2 MB</p>
-        {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
       </div>
       <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={onFile} />
     </div>

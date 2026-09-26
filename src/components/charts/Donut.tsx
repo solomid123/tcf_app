@@ -13,7 +13,7 @@ export function Donut({ segments, center, caption, size = 200 }: { segments: Seg
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90" aria-hidden>
-        <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+        <circle cx="100" cy="100" r={r} fill="none" style={{ stroke: "var(--line)" }} strokeWidth={stroke} />
         {total > 0 &&
           visible.map((s) => {
             const len = (s.value / total) * C;

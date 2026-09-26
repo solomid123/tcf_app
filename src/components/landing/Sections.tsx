@@ -14,8 +14,8 @@ export function Skills() {
             <div className="flex items-start justify-between">
               <span className="text-chrome text-5xl font-bold">{s.code}</span>
               <div className="flex gap-2 text-xs text-muted">
-                <span className="rounded-full border border-white/10 px-3 py-1">{s.q}</span>
-                <span className="rounded-full border border-white/10 px-3 py-1">{s.t}</span>
+                <span className="rounded-full border border-line px-3 py-1">{s.q}</span>
+                <span className="rounded-full border border-line px-3 py-1">{s.t}</span>
               </div>
             </div>
             <h3 className="mt-6 text-xl">{s.name}</h3>
@@ -39,7 +39,7 @@ export function Modes() {
           { n: "01", title: "Practice", items: practice },
           { n: "02", title: "Exam sitting", items: exam },
         ].map((m, i) => (
-          <div key={m.n} className={`p-10 ${i === 0 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
+          <div key={m.n} className={`p-10 ${i === 0 ? "border-b border-line md:border-b-0 md:border-r" : ""}`}>
             <p className="eyebrow">Mode {m.n}</p>
             <h3 className="mt-3 text-3xl">{m.title}</h3>
             <ul className="mt-6 space-y-3 text-fg/75">
@@ -71,8 +71,8 @@ export function Scoring() {
                 <span>{n.level}</span>
                 <span className="text-muted">{n.label}</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-white/40 via-white/80 to-accent" style={{ width: n.w }} />
+              <div className="h-2 overflow-hidden rounded-full bg-tint">
+                <div className="h-full rounded-full bg-gradient-to-r from-fg/30 via-fg/70 to-accent" style={{ width: n.w }} />
               </div>
             </div>
           ))}
@@ -117,7 +117,7 @@ export function Cta() {
 export function Footer() {
   return (
     <footer className="mx-auto w-full max-w-6xl px-4 pb-10 text-sm text-muted">
-      <div className="flex flex-col justify-between gap-2 border-t border-white/10 pt-6 md:flex-row">
+      <div className="flex flex-col justify-between gap-2 border-t border-line pt-6 md:flex-row">
         <span>© {new Date().getFullYear()} TCF Prep. Not affiliated with France Éducation international.</span>
         <span>Made for future Canadians</span>
       </div>

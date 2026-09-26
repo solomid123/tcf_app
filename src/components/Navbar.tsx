@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./theme/ThemeToggle";
 
 const links = [
   { href: "/#skills", label: "Skills" },
@@ -31,6 +32,7 @@ export async function Navbar() {
           ))}
         </ul>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {signedIn ? (
             <Link href="/dashboard" className="btn btn-primary !py-2">
               Dashboard

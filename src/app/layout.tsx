@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Questrial } from "next/font/google";
+import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
 const questrial = Questrial({
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${questrial.variable} h-full`}>
+    // suppressHydrationWarning: the inline script sets data-theme before React hydrates.
+    <html lang="en" className={`${questrial.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

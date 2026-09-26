@@ -2,7 +2,7 @@
 export function Backdrop() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#1a1b22_0%,#0b0b0d_60%)]" />
+      <div className="stage absolute inset-0" />
 
       {/* light blooms */}
       <div className="orb orb-glow animate-float-c left-[-8%] top-[35%] h-[420px] w-[420px] bg-[#c9d2ff]" />

@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import { changePassword, deleteAccount, updateGoals, updateProfile, type FormState } from "./actions";
 
 function Status({ state }: { state: FormState }) {
-  if (state?.error) return <p role="alert" className="text-sm text-red-300">{state.error}</p>;
-  if (state?.ok) return <p role="status" className="text-sm text-emerald-300">✓ {state.ok}</p>;
+  if (state?.error) return <p role="alert" className="text-sm text-danger">{state.error}</p>;
+  if (state?.ok) return <p role="status" className="text-sm text-success">✓ {state.ok}</p>;
   return null;
 }
 
@@ -57,9 +57,9 @@ export function GoalsForm({ targetNclc, examDate }: { targetNclc: number | null;
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Target NCLC" hint="Express Entry usually needs NCLC 7+ for maximum points.">
           <select name="target_nclc" defaultValue={targetNclc ?? ""} className="input appearance-none">
-            <option value="" className="bg-neutral-900">Not set</option>
+            <option value="" className="bg-bg">Not set</option>
             {NCLC_OPTIONS.map((n) => (
-              <option key={n} value={n} className="bg-neutral-900">NCLC {n}</option>
+              <option key={n} value={n} className="bg-bg">NCLC {n}</option>
             ))}
           </select>
         </Field>
@@ -111,7 +111,7 @@ export function DeleteAccountForm() {
         <button
           type="submit"
           disabled={pending}
-          className="btn border border-red-400/40 bg-red-500/15 !py-3 text-red-200 hover:bg-red-500/25 disabled:opacity-60"
+          className="btn border border-red-400/40 bg-red-500/15 !py-3 text-danger hover:bg-red-500/25 disabled:opacity-60"
         >
           {pending ? "Deleting…" : "Delete my account"}
         </button>

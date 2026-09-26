@@ -65,7 +65,7 @@ export function ParticleWave({ values, seed = 1, from = "#3b82f6", to = "#a5b4fc
 
   const id = `pw${seed}`;
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full ${empty ? "opacity-25" : ""}`} preserveAspectRatio="xMidYMax slice" aria-hidden>
+    <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full light:saturate-150 light:brightness-90 ${empty ? "opacity-25" : ""}`} preserveAspectRatio="xMidYMax slice" aria-hidden>
       <defs>
         <linearGradient id={`${id}c`} gradientUnits="userSpaceOnUse" x1="0" x2={width} y1="0" y2="0">
           <stop offset="0" stopColor={from} />

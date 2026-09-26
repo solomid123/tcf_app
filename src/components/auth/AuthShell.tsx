@@ -20,7 +20,7 @@ export function AuthShell({
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="mb-8"><Logo /></div>
         <div className="glass grain animate-fade-up w-full max-w-md overflow-hidden rounded-[2rem]">
-          <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-line px-6 py-4">
             <TrafficLights />
             <Link href="/" className="text-xs uppercase tracking-[0.2em] text-muted hover:text-fg">← Home</Link>
           </div>

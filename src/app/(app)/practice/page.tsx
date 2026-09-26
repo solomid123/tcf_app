@@ -41,15 +41,15 @@ export default async function PracticePage() {
               <div className="flex items-start justify-between">
                 <span className="text-chrome text-5xl font-bold">{s.code}</span>
                 <div className="flex gap-2 text-xs text-muted">
-                  <span className="rounded-full border border-white/10 px-3 py-1">{s.q}</span>
-                  <span className="rounded-full border border-white/10 px-3 py-1">{s.t}</span>
+                  <span className="rounded-full border border-line px-3 py-1">{s.q}</span>
+                  <span className="rounded-full border border-line px-3 py-1">{s.t}</span>
                 </div>
               </div>
               <h2 className="mt-6 text-xl">{s.name}</h2>
               <p className="text-sm text-muted">{s.en}</p>
               <p className="mt-4 leading-relaxed text-fg/75">{s.desc}</p>
 
-              <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-white/10 pt-5 text-center">
+              <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-line pt-5 text-center">
                 {[
                   ["Sessions", String(st.count)],
                   ["Average", st.avg == null ? "—" : `${st.avg.toFixed(0)}%`],
@@ -70,7 +70,7 @@ export default async function PracticePage() {
 
       <div className="glass grain mt-5 grid rounded-3xl md:grid-cols-3">
         {steps.map((s, i) => (
-          <div key={s.n} className={`p-7 ${i < 2 ? "border-b border-white/10 md:border-b-0 md:border-r" : ""}`}>
+          <div key={s.n} className={`p-7 ${i < 2 ? "border-b border-line md:border-b-0 md:border-r" : ""}`}>
             <p className="eyebrow">{s.n}</p>
             <p className="mt-2 text-lg">{s.t}</p>
             <p className="mt-1 text-sm text-muted">{s.d}</p>

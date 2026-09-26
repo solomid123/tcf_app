@@ -6,7 +6,7 @@ export function Hero() {
   return (
     <section className="pt-16 md:pt-24">
       <div className="glass grain animate-fade-up overflow-hidden rounded-[2rem]">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <TrafficLights />
           <span className="text-sm text-muted">tcfprep.ca/exam</span>
           <span className="w-[52px]" />
@@ -30,7 +30,7 @@ export function Hero() {
             </div>
             <div className="mt-12 flex items-center gap-3">
               {["4 SKILLS", "NCLC", "TIMED"].map((b) => (
-                <span key={b} className="rounded-md border border-white/40 px-2 py-1 text-[11px] tracking-[0.2em] text-fg/80">
+                <span key={b} className="rounded-md border border-fg/40 px-2 py-1 text-[11px] tracking-[0.2em] text-fg/80">
                   {b}
                 </span>
               ))}
@@ -40,7 +40,7 @@ export function Hero() {
           <div className="glass-strong grain relative self-center rounded-3xl p-6">
             <div className="flex items-center justify-between">
               <span className="eyebrow">Compréhension écrite</span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs tabular-nums">42:18</span>
+              <span className="rounded-full bg-tint px-3 py-1 text-xs tabular-nums">42:18</span>
             </div>
             <p className="mt-5 text-sm text-muted">Question 17 / 39 · Niveau B2</p>
             <p className="mt-2 leading-relaxed">
@@ -53,9 +53,9 @@ export function Hero() {
                 return (
                   <div
                     key={o}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${active ? "border-accent/60 bg-accent/10" : "border-white/10 bg-black/20"}`}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${active ? "border-accent/60 bg-accent/10" : "border-line bg-well"}`}
                   >
-                    <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${active ? "bg-accent text-black" : "bg-white/10"}`}>
+                    <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${active ? "bg-accent text-black" : "bg-tint"}`}>
                       {"ABCD"[i]}
                     </span>
                     {o}
@@ -63,8 +63,8 @@ export function Hero() {
                 );
               })}
             </div>
-            <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full w-[44%] rounded-full bg-gradient-to-r from-white/70 to-accent" />
+            <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-tint">
+              <div className="h-full w-[44%] rounded-full bg-gradient-to-r from-fg/60 to-accent" />
             </div>
           </div>
         </div>

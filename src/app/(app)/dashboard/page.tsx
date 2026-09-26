@@ -53,7 +53,7 @@ export default async function DashboardPage() {
           badge={est != null ? "Live" : undefined}
           sub={
             est == null ? <span className="text-muted">Sit an exam to get your level</span>
-            : target ? <span className={est >= target ? "text-emerald-300" : "text-amber-200"}>{est >= target ? "✓ Target reached" : `${target - est} level${target - est === 1 ? "" : "s"} to target`}</span>
+            : target ? <span className={est >= target ? "text-success" : "text-warn"}>{est >= target ? "✓ Target reached" : `${target - est} level${target - est === 1 ? "" : "s"} to target`}</span>
             : <span className="text-muted">Weakest skill from latest exams</span>
           }
           wave={{ values: stats.exams.series, seed: 3, from: "#6366f1", to: "#6ee7b7" }}
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
               Nothing here yet. <Link href="/practice" className="text-fg underline-offset-4 hover:underline">Start your first practice session</Link>.
             </div>
           ) : (
-            <ul className="divide-y divide-white/5">
+            <ul className="divide-y divide-line">
               {stats.recent.map((a) => (
                 <li key={a.id} className="flex items-center gap-4 py-3 text-sm">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs" style={{ background: `${skillMeta(a.skill).color}22`, color: skillMeta(a.skill).color }}>

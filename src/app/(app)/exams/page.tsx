@@ -38,7 +38,7 @@ export default async function ExamsPage() {
 
       {/* Full exam */}
       <section className="glass grain mt-10 overflow-hidden rounded-[2rem]">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <TrafficLights />
           <span className="text-sm text-muted">Full sitting · {Math.floor(TOTAL_MIN / 60)} h {TOTAL_MIN % 60} min</span>
           <span className="w-[52px]" />
@@ -54,7 +54,7 @@ export default async function ExamsPage() {
           </div>
           <ol className="space-y-3">
             {SKILLS.map((s, i) => (
-              <li key={s.code} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
+              <li key={s.code} className="flex items-center gap-4 rounded-2xl border border-line bg-well px-5 py-4">
                 <span className="text-xs text-muted">{String(i + 1).padStart(2, "0")}</span>
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }} />
                 <span className="flex-1">{s.name}</span>
@@ -87,13 +87,13 @@ export default async function ExamsPage() {
         ) : (
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-[0.18em] text-muted">
+              <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.18em] text-muted">
                 <th className="px-6 py-4 font-normal">Date</th>
                 {SKILL_CODES.map((c) => <th key={c} className="px-4 py-4 font-normal">{c}</th>)}
                 <th className="px-6 py-4 text-right font-normal">NCLC</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-line">
               {sittings.map((s) => (
                 <tr key={s.id}>
                   <td className="px-6 py-4">

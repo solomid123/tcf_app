@@ -10,7 +10,7 @@ function Delta({ value, suffix = " pts" }: { value: number | null; suffix?: stri
   if (value == null) return <span className="text-muted">No comparison yet</span>;
   const up = value >= 0;
   return (
-    <span className={up ? "text-emerald-300" : "text-rose-300"}>
+    <span className={up ? "text-success" : "text-danger"}>
       {up ? "↑" : "↓"} {Math.abs(value).toFixed(1)}{suffix}
     </span>
   );
@@ -25,7 +25,7 @@ export function StatCard({ title, value, sub, badge, wave }: {
       <div className="flex items-start justify-between">
         <h3 className="text-sm text-fg/80">{title}</h3>
         {badge && (
-          <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-200">
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-success">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {badge}
           </span>
         )}
@@ -68,7 +68,7 @@ function Panel({ title, action, children }: { title: string; action?: React.Reac
   );
 }
 
-const pill = "rounded-full border border-white/15 px-3 py-1 text-xs text-muted transition-colors hover:text-fg";
+const pill = "rounded-full border border-line px-3 py-1 text-xs text-muted transition-colors hover:text-fg";
 
 export function PracticeDonut({ stats }: { stats: Stats }) {
   const { total, bySkill } = stats.practice;

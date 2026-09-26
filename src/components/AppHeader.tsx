@@ -3,6 +3,7 @@ import { signOut } from "@/app/auth/actions";
 import { Avatar } from "./Avatar";
 import { Logo } from "./Logo";
 import { NavLinks } from "./NavLinks";
+import { ThemeToggle } from "./theme/ThemeToggle";
 
 export function AppHeader({ avatarUrl, name }: { avatarUrl?: string | null; name?: string | null }) {
   return (
@@ -10,7 +11,8 @@ export function AppHeader({ avatarUrl, name }: { avatarUrl?: string | null; name
       <nav className="glass grain flex items-center justify-between gap-3 rounded-full py-2.5 pl-5 pr-2.5">
         <Logo />
         <div className="hidden md:block"><NavLinks /></div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <Link href="/settings" aria-label="Settings"><Avatar url={avatarUrl} name={name} /></Link>
           <form action={signOut}>
             <button className="btn btn-glass !py-2 text-sm">Sign out</button>

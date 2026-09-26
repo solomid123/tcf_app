@@ -57,8 +57,8 @@ export function SettingsNav({ items }: { items: Item[] }) {
           aria-current={active === t.id ? "true" : undefined}
           className={`block rounded-2xl px-4 py-2.5 text-sm transition-colors ${
             active === t.id
-              ? "bg-white/10 text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-              : "text-muted hover:bg-white/5 hover:text-fg"
+              ? "bg-tint text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] light:shadow-[0_2px_10px_-3px_rgba(40,55,120,0.25)]"
+              : "text-muted hover:bg-tint/50 hover:text-fg"
           }`}
         >
           {t.label}
