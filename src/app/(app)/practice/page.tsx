@@ -63,9 +63,9 @@ export default async function PracticePage() {
                 ))}
               </dl>
 
-              {s.code === "CO" || s.code === "EO" ? (
+              {s.code !== "CE" ? (
                 <Link href={`/practice/${s.code.toLowerCase()}`} className="btn btn-primary mt-6 w-full">
-                  {s.code === "EO" ? "Start a simulation" : "Start practising"}
+                  {s.code === "EO" ? "Start a simulation" : s.code === "EE" ? "Start an épreuve" : "Start practising"}
                 </Link>
               ) : (
                 <button disabled className="btn btn-glass mt-6 w-full cursor-not-allowed opacity-60">Coming soon</button>

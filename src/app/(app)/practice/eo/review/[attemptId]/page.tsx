@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { nclcLabel } from "@/lib/tcf";
-import { Waiting } from "./Waiting";
+import { Waiting } from "@/components/Waiting";
 
 export const metadata = { title: "Expression orale · Results | TCF Prep" };
 
