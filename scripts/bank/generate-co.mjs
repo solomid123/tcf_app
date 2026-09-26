@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import { escapeXml, image, llmJson, tts, visionJson } from "./azure.mjs";
+import { escapeXml, image, llmJson, maiImage, tts, visionJson } from "./azure.mjs";
 import { blueprint, INSTRUCTIONS, TOPICS } from "./co-blueprint.mjs";
 import { CHECK_SCHEMA, checkPrompt, GUESS_SCHEMA, guessPrompt, IMAGE_STYLE, imageCheckPrompt, ITEM_SCHEMA, itemPrompt, SYSTEM } from "./co-prompts.mjs";
 
@@ -23,7 +23,16 @@ const PUBLISH = process.argv.includes("--publish");
 // --status pool: generated for the "New série" pool (handed to a user on request). Otherwise published or draft.
 const STATUS = arg("status", PUBLISH ? "published" : "draft");
 if (!["draft", "pool", "published"].includes(STATUS)) throw new Error(`bad --status ${STATUS}`);
-const CONCURRENCY = Number(arg("concurrency", 4));
+const CONCURRENCY = Number(arg("concurrency", 10));
+// Models per step (override in .env.local). "fuelix:<id>" = Fuelix gateway; "azure" = the Azure text model.
+const MODELS = {
+  strong: process.env.CO_MODEL_STRONG ?? "fuelix:gpt-6-luna", // B2–C2 documents and the picture items
+  fast: process.env.CO_MODEL_FAST ?? "fuelix:gemini-3.8-flash", // A1–B1 documents and question-réponse
+  check: process.env.CO_MODEL_CHECK ?? "fuelix:gemini-3.8-flash", // blind answer check, too-easy check, scene rewrites
+  vision: process.env.CO_MODEL_VISION ?? "fuelix:gemini-3.8-flash", // picture check
+};
+const modelFor = (key) => (MODELS[key] === "azure" ? undefined : MODELS[key]);
+const writerFor = (slot) => modelFor(slot.kind === "image_description" || ["B2", "C1", "C2"].includes(slot.level) ? "strong" : "fast");
 const only = arg("only", null);
 const [ONLY_FROM, ONLY_TO] = only ? only.split("-").map(Number) : [1, 39];
 
@@ -59,11 +68,13 @@ const slots = blueprint();
 // Balanced answer letters across the épreuve (about 10 of each A/B/C/D).
 const targets = shuffle(Array.from({ length: 39 }, (_, i) => i % 4));
 // Topics: rotate through each level's pool so every série gets different situations.
+// A picture situation that couldn't be drawn clearly moves on to another topic (the shift survives re-runs).
+const shiftOf = (p) => state[`shift-${p}`] ?? 0;
 const topicFor = (slot) => {
   const pool = TOPICS[slot.level];
   const sameLevel = slots.filter((s) => s.level === slot.level);
   const idx = sameLevel.indexOf(slot);
-  return pool[((SERIE - 1) * sameLevel.length + idx) % pool.length];
+  return pool[((SERIE - 1) * sameLevel.length + idx + shiftOf(slot.position) * 5) % pool.length];
 };
 
 // ---------- voices ----------
@@ -162,7 +173,7 @@ const SUBJECTS = [
 ];
 const subjectHint = (slot) =>
   slot.kind === "image_description"
-    ? `\nPersonnage qui parle sur le dessin : ${SUBJECTS[(SERIE * 4 + slot.position) % SUBJECTS.length]}.`
+    ? `\nPersonnage qui parle sur le dessin : ${SUBJECTS[(SERIE * 4 + slot.position + shiftOf(slot.position)) % SUBJECTS.length]}.`
     : "";
 
 async function writeItem(slot, avoid) {
@@ -170,6 +181,7 @@ async function writeItem(slot, avoid) {
   let feedback = subjectHint(slot);
   for (let attempt = 1; attempt <= 5; attempt++) {
     const raw = await llmJson({
+      model: writerFor(slot),
       instructions: SYSTEM,
       input: itemPrompt({ slot, topic: topicFor(slot), avoid, seen, accent: PLANNED_ACCENT[slot.position] }) + feedback,
       schema: ITEM_SCHEMA,
@@ -184,7 +196,7 @@ async function writeItem(slot, avoid) {
     const item = placeAnswer(raw, targets[slot.position - 1]);
     let check = null;
     if (slot.kind !== "image_description") {
-      check = await llmJson({ input: checkPrompt(item, slot.kind), schema: CHECK_SCHEMA, name: "check" });
+      check = await llmJson({ model: modelFor("check"), input: checkPrompt(item, slot.kind), schema: CHECK_SCHEMA, name: "check" });
       if (check.answer !== item.answer || check.ambiguous) {
         log(slot.position, `attempt ${attempt} failed blind check (got ${check.answer}, ambiguous=${check.ambiguous}): ${check.issues}`);
         feedback = `${subjectHint(slot)}\n\nATTENTION, un relecteur a jugé ta tentative précédente problématique : ${check.issues}. Écris un item entièrement nouveau, avec une seule bonne réponse indiscutable.`;
@@ -192,7 +204,7 @@ async function writeItem(slot, avoid) {
       }
     }
     // Too easy? A reader who never heard the recording should not be able to spot the key.
-    const guess = await llmJson({ input: guessPrompt(item, slot.kind), schema: GUESS_SCHEMA, name: "guess" });
+    const guess = await llmJson({ model: modelFor("check"), input: guessPrompt(item, slot.kind), schema: GUESS_SCHEMA, name: "guess" });
     if (!(guess.confident && guess.answer === item.answer)) return { item, check };
     log(slot.position, `attempt ${attempt} too easy — guessable without listening: ${guess.reason}`);
     feedback = `${subjectHint(slot)}\n\nATTENTION, ta tentative précédente était TROP FACILE : on trouvait la bonne réponse sans écouter (${guess.reason}). Écris un item entièrement nouveau où les 4 propositions sont aussi plausibles les unes que les autres sans le document.`;
@@ -219,7 +231,16 @@ function buildSsml(slot, item, cast) {
   } else {
     item.turns.forEach((t, i) => parts.push(say(cast[t.speaker], t.text, i === 0 ? 800 : 350)));
   }
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="fr-FR">${parts.join("")}</speak>`;
+  // One SSML document per voice segment: they are synthesized in parallel and the MP3 frames concatenated,
+  // which is several times faster than one long request for a multi-turn document.
+  return parts
+    .flatMap((p) => p.split(/(?=<voice )/))
+    .filter(Boolean)
+    .map((p) => `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="fr-FR">${p}</speak>`);
+}
+
+async function synthesize(ssmls) {
+  return Buffer.concat(await Promise.all(ssmls.map((x) => tts(x))));
 }
 
 // ---------- pictures ----------
@@ -228,21 +249,38 @@ async function makePicture(slot, item) {
   let extra = "";
   let scene = item.image_prompt;
   for (let attempt = 1; attempt <= 3; attempt++) {
+    // Two image models: FLUX (≈10 s) first, MAI-Image-2.5 (≈20 s) on the next attempt or when FLUX refuses or fails,
+    // so a scene one model draws badly or blocks gets a fresh take from the other.
+    const engines = attempt % 2 ? [["FLUX", image], ["MAI", maiImage]] : [["MAI", maiImage], ["FLUX", image]];
+    const prompt = `${IMAGE_STYLE} Scene: ${scene}${extra}`;
+    let raw = null;
+    let lastError = null;
+    for (const [name, draw] of engines) {
+      try {
+        raw = await draw(prompt);
+        break;
+      } catch (e) {
+        lastError = e;
+        log(slot.position, `picture attempt ${attempt}: ${name} failed (${e.message.slice(0, 120)})`);
+      }
+    }
     let buf;
     try {
+      if (!raw) throw lastError;
       // Booklet pictures are printed in greyscale: strip any stray tint the model adds.
-      buf = await sharp(await image(`${IMAGE_STYLE} Scene: ${scene}${extra}`)).grayscale().jpeg({ quality: 88 }).toBuffer();
+      buf = await sharp(raw).grayscale().jpeg({ quality: 88 }).toBuffer();
     } catch (e) {
-      if (!/refusal|moderat|safety/i.test(e.message)) throw e;
-      log(slot.position, `picture attempt ${attempt} refused by the image model — rewriting the scene`);
+      if (!/refusal|moderat|safety|content_filter|blocked/i.test(e.message)) throw e;
+      log(slot.position, `picture attempt ${attempt} refused by both image models — rewriting the scene`);
       ({ scene } = await llmJson({
+        model: modelFor("check"),
         input: `This image prompt was refused by an image model's safety filter. Rewrite it so it depicts the same scene and still unmistakably shows "${correct}", but with nothing a safety filter could flag (no blades, knives, tools in hand pointing at people, weapons, fire, medicine, alcohol, children alone, injuries). Keep it concrete and visual, in English.\n\nPrompt: ${scene}`,
         schema: { type: "object", additionalProperties: false, required: ["scene"], properties: { scene: { type: "string" } } },
         name: "scene",
       }));
       continue;
     }
-    const v = await visionJson({ imageBuf: buf, prompt: imageCheckPrompt(item.options), schema: CHECK_SCHEMA });
+    const v = await visionJson({ model: modelFor("vision"), imageBuf: buf, prompt: imageCheckPrompt(item.options), schema: CHECK_SCHEMA });
     if (v.answer === item.answer && !v.ambiguous) return { buf, attempts: attempt };
     log(slot.position, `picture attempt ${attempt} rejected (vision chose ${v.answer}, ambiguous=${v.ambiguous}): ${v.issues}`);
     extra = ` The picture must show unmistakably and prominently: "${correct}". It must clearly NOT match: ${item.options
@@ -263,6 +301,7 @@ async function processSlot(slot) {
       if (slot.kind !== "image_description" || scenario >= 3 || !/vision check/.test(e.message)) throw e;
       log(slot.position, `scenario ${scenario} could not be drawn clearly — writing a new situation`);
       delete state[slot.position];
+      state[`shift-${slot.position}`] = shiftOf(slot.position) + 1;
       save();
       fs.rmSync(path.join(OUT, `q${String(slot.position).padStart(2, "0")}.mp3`), { force: true });
     }
@@ -288,7 +327,7 @@ async function processSlotOnce(slot) {
   }
   const audioFile = path.join(OUT, `q${String(p).padStart(2, "0")}.mp3`);
   if (!fs.existsSync(audioFile)) {
-    fs.writeFileSync(audioFile, await tts(buildSsml(slot, s.item, s.cast)));
+    fs.writeFileSync(audioFile, await synthesize(buildSsml(slot, s.item, s.cast)));
     log(p, "audio ok");
   }
   if (slot.kind === "image_description") {
@@ -409,6 +448,7 @@ if (process.argv.includes("--recast")) {
 }
 console.log(`CO Série ${SERIE}: ${todo.length} item(s), concurrency ${CONCURRENCY}`);
 const t0 = Date.now();
+console.log(`Models: ${Object.entries(MODELS).map(([k, v]) => `${k}=${v}`).join(" ")}`);
 const failures = await pool(todo, CONCURRENCY, processSlot);
 console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)}s. ${failures.length ? `Failed: ${failures.join(", ")} (re-run to retry)` : "No failures."}`);
 if (failures.length) process.exitCode = 1;
